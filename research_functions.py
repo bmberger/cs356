@@ -126,7 +126,6 @@ def get_categories(h, queries, isPatched):
                     if "asn" in p['autonomous_system']:
                         ases.append(p['autonomous_system']['asn'])
                     
-
     # Searches for categories associated with vulnerable instances' ASes
     with open(r'2022-05_categorized_ases.csv', newline='\n') as file:
         cat_ases = csv.DictReader(file)
@@ -134,10 +133,15 @@ def get_categories(h, queries, isPatched):
         for entry in cat_ases:
             for asn in ases:
                 if asn == int(entry['ASN'][2:]):
-                    if entry['Category 1 - Layer 1'] in cats:
-                        cats[entry['Category 1 - Layer 1']] += 1
+                    if entry['Category 1 - Layer 1'] == "Computer and Information Technology" and entry['Category 2 - Layer 1'] != '':
+                        layer = 'Category 1 - Layer 2'
                     else:
-                        cats[entry['Category 1 - Layer 1']] = 1 
+                        layer = 'Category 1 - Layer 1'
+                        
+                    if entry[layer] in cats:
+                        cats[entry[layer]] += 1
+                    else:
+                        cats[entry[layer]] = 1 
 
     # Print out top 10 vulnerable categories
     top10 = heapq.nlargest(10, cats, key=cats.get)
@@ -184,27 +188,27 @@ def print_data(c, h, service, vuln_queries, patch_queries, query, patch_versions
     # print(get_countries(c, patch_queries))
     # print("\n")
 
-    # print(f"## Top 10 Categories with Vulnerable Logj4 Instances of {service} ##")
-    # result_vuln = get_categories(h, vuln_queries)
-    # print(result_vuln[0])
-    # print("\n")
-    # print(f"## Top 10 Categories with Patched Logj4 Instances of {service} ##")
-    # result_patch = get_categories(h, patch_queries, True)
-    # print(result_patch[0])
-    # print("\n")
+    print(f"## Top 10 Categories with Vulnerable Logj4 Instances of {service} ##")
+    result_vuln = get_categories(h, vuln_queries, False)
+    print(result_vuln[0])
+    print("\n")
+    print(f"## Top 10 Categories with Patched Logj4 Instances of {service} ##")
+    result_patch = get_categories(h, patch_queries, True)
+    print(result_patch[0])
+    print("\n")
     
     # patched_ips = result_patch[2]
-    file_exists = exists(service + "_" + "history.json")
-    if not file_exists:
-        ip_to_history = get_historical_data(h, patched_ips, service)
-    else: 
-        print("SHOULD BE HERE")
-        f = open(service + "_" + "history.json")
-        ip_to_history = json.load(f)
-        f.close()
+    # file_exists = exists(service + "_" + "history.json")
+    # if not file_exists:
+    #     ip_to_history = get_historical_data(h, patched_ips, service)
+    # else: 
+    #     print("SHOULD BE HERE")
+    #     f = open(service + "_" + "history.json")
+    #     ip_to_history = json.load(f)
+    #     f.close()
     
-    isPatchedHistory = get_patching_history(ip_to_history, service, patch_versions)
-    print(isPatchedHistory)
+    # isPatchedHistory = get_patching_history(ip_to_history, service, patch_versions)
+    # print(isPatchedHistory)
     # DO STUFF WITH ip_to_history
 
     # print(f"## Total Vulnerable Logj4 Instances of {service} ##")
