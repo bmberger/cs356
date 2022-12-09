@@ -47,8 +47,6 @@ def get_port_ver_history(ip_to_history, service_name, patching_versions):
                 if ip not in ip_to_port_ver_history:
                     ip_to_port_ver_history[ip] = {}
                 ip_to_port_ver_history[ip][date] = ports_to_version
-                
-    print(ip_to_port_ver_history)
     return ip_to_port_ver_history
 
 # Gets a dict of ports to their bodies 
