@@ -24,7 +24,7 @@ def get_version_str_end(service_name):
 # If any port's service is vulnerable, the IP is considered vulnerable.
 # Only if all of the port's services are patched, the IP is considered patched.
 def get_binary_history(ip_to_history, service_name, versions):
-    ip_to_port_ver_history = get_port_ver_history(ip_to_history, service_name, patching_versions)
+    ip_to_port_ver_history = get_port_ver_history(ip_to_history, service_name, versions)
     ip_to_binary_history = {}
     for ip in ip_to_port_ver_history.keys():
         for date in ip_to_port_ver_history[ip].keys():
@@ -43,7 +43,7 @@ def get_binary_history(ip_to_history, service_name, versions):
     return ip_to_binary_history
 
 # Parses through ip_to_history to accurately categorize the server via port-granularity           
-def get_port_ver_history(ip_to_history, service_name, patching_versions):
+def get_port_ver_history(ip_to_history, service_name, versions):
     ip_to_port_ver_history = {}
     for ip in ip_to_history.keys():
         for date in ip_to_history[ip].keys():
@@ -104,8 +104,7 @@ def extract_version(body, service_name, ip):
     raise Exception("No verion was found for " + ip + " and here was the body: " + body)
                 
 # Gets a dict from ip to a dict of dates to that ip's response for that date
-def get_historical_data(h, ips, service_name, file_name):
-    datetimes = [datetime.date(2021, 12, 6), datetime.date(2022, 1, 6), datetime.date(2022, 2, 6), datetime.date(2022, 3, 6), datetime.date(2022, 4, 6), datetime.date(2022, 5, 6), datetime.date(2022, 6, 6), datetime.date(2022, 7, 6), datetime.date(2022, 8, 6), datetime.date(2022, 9, 6), datetime.date(2022, 10, 6), datetime.date(2022, 11, 6), datetime.date(2022, 12, 9)]
+def get_historical_data(h, ips, service_name, file_name, datetimes):
     dates = [d.strftime('%Y-%m-%dT%H:%M:%SZ') for d in datetimes]
     ip_to_history = {}
     for date in dates:
@@ -131,13 +130,13 @@ def get_ips(h, queries):
     return ips
 
 # Combines get_ips and get_historical_data while also checking if that file already exists
-def get_history(h, queries, service, isPatched):
+def get_history(h, queries, service, isPatched, datetimes, end_file):
     ips = get_ips(h, queries)
-    file_name = service + "_patched_history.json" if isPatched else service + "_vulnerable_history.json"
+    file_name = service + "_patched" + end_file if isPatched else service + "_vulnerable" + end_file
     
     file_exists = exists(file_name)
     if not file_exists:
-        ip_to_history = get_historical_data(h, ips, service, file_name)
+        ip_to_history = get_historical_data(h, ips, service, file_name, datetimes)
     else: 
         f = open(file_name)
         ip_to_history = json.load(f)
@@ -145,26 +144,41 @@ def get_history(h, queries, service, isPatched):
     return ip_to_history
 
 # Gets the total number of ips associated with dict (i.e. how many vulnerable IPs are there?)
-def get_total_query_size(ip_to_history):
-    return len(ip_to_history.keys())
+def get_total_query_size(ip_to_binary_history, isPatched, mostRecentDate):
+    vulns = set()
+    patched = set()
+    
+    # Removes counting patched servers who also have a vulnerable instance 
+    for ip in ip_to_binary_history:
+        if not isPatched:
+            vulns.add(ip)
+        elif isPatched and ip_to_binary_history[ip][mostRecentDate] == 1:
+            patched.add(ip)
+    return len(patched) if isPatched else len(vulns)
 
-# Gets total number running a particular service
+# Gets total number of servers running a particular service
 def get_total_running_service(h, query):
-    num = 0
+    ips = set()
     for page in h.search(query, pages=-1):
-        num += len(page)
-    return num  
+        for p in page:
+            if "ip" in p:
+                ips.add(p["ip"])
+    return len(ips)  
     
-def print_data(h, service, vuln_queries, patch_queries, query):
+def print_data(h, service, vuln_queries, patch_queries, query, datetimes, end_file, vuln_vers, patch_vers):
     # Get vulnerable and patched history
-    ip_to_vuln_history = get_history(h, vuln_queries, service, False)
-    ip_to_patched_history = get_history(h, patch_queries, service, True)
-    
+    ip_to_vuln_history = get_history(h, vuln_queries, service, False, datetimes, end_file)
+    ip_to_patched_history = get_history(h, patch_queries, service, True, datetimes, end_file)
+        
+    vuln_binary_history = get_binary_history(ip_to_vuln_history, service, vuln_vers)
+    patch_binary_history = get_binary_history(ip_to_patched_history, service, patch_vers)
+
+    mostRecentDate = datetimes[-1].strftime('%Y-%m-%dT%H:%M:%SZ')
     print(f"## Total Vulnerable Logj4 Instances of {service} ##")
-    print(get_total_query_size(ip_to_vuln_history))
+    print(get_total_query_size(vuln_binary_history, False, mostRecentDate))  
     print("\n")
     print(f"## Total Patched Logj4 Instances of {service} ##")
-    print(get_total_query_size(ip_to_patched_history))
+    print(get_total_query_size(patch_binary_history, True, mostRecentDate))
     print("\n")
 
     print(f"## Total Instances of {service} ##")

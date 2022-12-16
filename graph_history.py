@@ -24,7 +24,7 @@ def graphService(service, vers, isPatched):
     f = open(file_name)
     ip_to_history = json.load(f)
     f.close()
-    patched_history = get_history.get_patching_history(ip_to_history, service, vers)
+    patched_history = get_history.get_binary_history(ip_to_history, service, vers)
     
     # Graph the service's patched or unpatched history
     graph(patched_history)
