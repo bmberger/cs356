@@ -24,7 +24,7 @@ def get_version_str_end(service_name):
 # If any port's service is vulnerable, the IP is considered vulnerable.
 # Only if all of the port's services are patched, the IP is considered patched.
 def get_binary_history(ip_to_history, service_name, versions):
-    ip_to_port_ver_history = get_port_ver_history(ip_to_history, service_name, patching_versions)
+    ip_to_port_ver_history = get_port_ver_history(ip_to_history, service_name, versions)
     ip_to_binary_history = {}
     for ip in ip_to_port_ver_history.keys():
         for date in ip_to_port_ver_history[ip].keys():
